@@ -1,23 +1,26 @@
-## Helmet Detection Deployment on with Kubeflow KServe
+# Helmet Detection Deployment on with Kubeflow KServe
 
-### Intruction
+## Intruction
 
 The InferenceService custom resource is the primary interface that is used for deploying models on KServe. Inside an InferenceService, users can specify multiple components that are used for handling inference requests. These components are the predictor, transformer, and explainer. 
-For more detailed documentation on Kubeflow KServe, refer to `KServe <https://kserve.github.io/website/0.7/modelserving/data_plane/>`.
+For more detailed documentation on Kubeflow KServe, refer to [KServe](https://kserve.github.io/website/0.7/modelserving/data_plane/).
 
+## Get Started
+### Prepare model and configuration files
 
+First, you can create a notebook refer to [Kubeflow Notebook](https://elements-of-ai.github.io/kubeflow-docs/user-guide/notebooks.html#user-guide-notebooks). Then, clone model package have prepared in this notebook server. we need to prepare 3 files:
 
-### Get Started
-#### Prepare model and configuration files
+- helmet.pt: fine-tuning the model with your own data and save the parameters
+- helmet.torchscript.pt: a serialized file (.pt or .pth) should be a checkpoint in case of torchscript and state_dict in case of eager mode.
+- handler.py: codes for model initialization, pre-processing, post-processing, etc.
 
-First, you can create a notebook refer to [Kubeflow Notebook](https://elements-of-ai.github.io/kubeflow-docs/user-guide/notebooks.html#user-guide-notebooks). Then, clone model package have prepared in this notebook server.
 
 ```bash
 $ git clone https://github.com/harperjuanl/helmet_yolov5_torchserve.git
 $ cd kserve
 ```
 
-#### Upload to MinIO
+### Upload to MinIO
 
 If you already have the MinIO storage, you can directly skip the MinIO deployment step, and follow the next steps to upload data to MinIO. If not, we also provide a standalone MinIO deployment guide on the kubernetes clusters, you can refer to the YAML files from [MinIO deployment files](https://github.com/vmware/ml-ops-platform-for-vsphere/tree/main/website/content/en/docs/kubeflow-tutorial/lab4_minio_deploy).
 
@@ -32,7 +35,7 @@ $ kubectl apply -f minio-standalone-service.yml
 $ kubectl apply -f minio-standalone-deployment.yml
 ```
 
-This step uploads v1/torchserve/model-store, v1/torchserve/config to MinIO buckets. You need to find the MinIO endpoint_url, accesskey, secretkey before upload using the following commands in your terminal.
+This step uploads `v1/torchserve/model-store`, `v1/torchserve/config` to MinIO buckets. You need to find the MinIO `endpoint_url`, `accesskey`, `secretkey` before upload using the following commands in your terminal.
 
 ```bash
 
@@ -49,104 +52,328 @@ $ kubectl get secret <minio-secret-name> -n <your-namespace> -o jsonpath='{.data
 $ kubectl get secret <minio-secret-name> -n <your-namespace> -o jsonpath='{.data.secretkey}' | base64 -d
 ```
 
-
-#### Detection & Result
+You need to install `boto3` dependency package in the notebook server created before, and run the follow python code to upload model files.
 
 ```bash
-# Detect in the ternimal
-$ curl -T test_1.jpg 'http://localhost:8080/predictions/helmet_detection' 
-Output: 
-[
-  {
-    "x1": 0.16830310225486755,
-    "y1": 0.36698096990585327,
-    "x2": 0.3356267809867859,
-    "y2": 0.5662754774093628,
-    "confidence": 0.9418923854827881,
-    "class": "person"
-  },
-  {
-    "x1": -0.0003846943436656147,
-    "y1": 0.2697369456291199,
-    "x2": 0.11975767463445663,
-    "y2": 0.5021408796310425,
-    "confidence": 0.9287041425704956,
-    "class": "person"
-  },
-  {
-    "x1": 0.31550225615501404,
-    "y1": 0.27130556106567383,
-    "x2": 0.4195330739021301,
-    "y2": 0.4244980812072754,
-    "confidence": 0.9224411249160767,
-    "class": "person"
-  },
-  {
-    "x1": 0.8000054359436035,
-    "y1": 0.36035841703414917,
-    "x2": 0.8742903470993042,
-    "y2": 0.4628569483757019,
-    "confidence": 0.9012498259544373,
-    "class": "person"
-  },
-  {
-    "x1": 0.44192060828208923,
-    "y1": 0.3977605700492859,
-    "x2": 0.5190550088882446,
-    "y2": 0.4892307221889496,
-    "confidence": 0.8915991187095642,
-    "class": "person"
-  },
-  {
-    "x1": 0.9677120447158813,
-    "y1": 0.4071219563484192,
-    "x2": 0.9998529553413391,
-    "y2": 0.5111279487609863,
-    "confidence": 0.875587522983551,
-    "class": "person"
-  },
-  {
-    "x1": 0.5246236324310303,
-    "y1": 0.39841872453689575,
-    "x2": 0.5718141794204712,
-    "y2": 0.4656790792942047,
-    "confidence": 0.8437989950180054,
-    "class": "hat"
-  },
-  {
-    "x1": 0.6443458795547485,
-    "y1": 0.2609959542751312,
-    "x2": 0.7564457654953003,
-    "y2": 0.443324476480484,
-    "confidence": 0.84254390001297,
-    "class": "person"
-  },
-  {
-    "x1": 0.6181862950325012,
-    "y1": 0.3655022084712982,
-    "x2": 0.6777603030204773,
-    "y2": 0.452880322933197,
-    "confidence": 0.7514644861221313,
-    "class": "person"
-  }
-]%
+!pip install boto3 -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+```bash
+import os
+    from urllib.parse import urlparse
+    import boto3
+
+    os.environ["AWS_ENDPOINT_URL"] = "http://10.117.233.16:9000"
+    os.environ["AWS_REGION"] = "us-east-1"
+    os.environ["AWS_ACCESS_KEY_ID"] = "minioadmin"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "minioadmin"
+
+    s3 = boto3.resource('s3',
+                        endpoint_url=os.getenv("AWS_ENDPOINT_URL"),
+                        verify=True)
+
+    print("current buckets in s3:")
+    print(list(s3.buckets.all()))
+
+    bucket_name='helmet-bucket'
+    s3.create_bucket(Bucket=bucket_name)
+
+    curr_path = os.getcwd()
+    base_path = os.path.join(curr_path, "torchserve")
 
 
-# You can also choose to detect with the jupyter notebook
-$ python3 -m pip install virtualenv
-$ python3 -m virtualenv helmet-env
-$ source yolov5-env/bin/activate
+    bucket_path = "helmet_detection"
 
-$ pip3 install -r requirements.txt
-$ python3 -m pip install jupyter      # only need to install once if you don't have jupyter 
-$ jupyter notebook 
-# open the /helmet_yolov5_torchserve/resource/pytorch-yolov5-helmet-detection-inference.ipynb and run the code cell
+    bucket = s3.Bucket(bucket_name)
+
+    # upload
+    bucket.upload_file(os.path.join(base_path, "model-store", "helmet_detection.mar"),
+                    os.path.join(bucket_path, "model-store/helmet_detection.mar"))
+    bucket.upload_file(os.path.join(base_path, "config", "config.properties"), 
+                    os.path.join(bucket_path, "config/config.properties"))
+
+    # check files 
+    for obj in bucket.objects.filter(Prefix=bucket_path):
+        print(obj.key)
+```
+
+### Create Minio Service Account and Secret
+
+When you create an `InferenceService` to start model, you need to be authorized to access MinIO to get model. Thus, you need to create MinIO service account and secret according to the follow yaml file in the terminal.
+
+```bash
+cat << EOF | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+    name: minio-s3-secret-user
+    annotations:
+        serving.kserve.io/s3-endpoint: "10.117.233.16:9000" # replace with your s3 endpoint e.g minio-service.kubeflow:9000
+        serving.kserve.io/s3-usehttps: "0" # by default 1, if testing with minio you can set to 0
+        serving.kserve.io/s3-region: "us-east-2"
+        serving.kserve.io/s3-useanoncredential: "false" # omitting this is the same as false, if true will ignore provided credential and use anonymous credentials
+    type: Opaque
+    stringData: # use "stringData" for raw credential string or "data" for base64 encoded string
+    AWS_ACCESS_KEY_ID: minioadmin
+    AWS_SECRET_ACCESS_KEY: minioadmin
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+    name: minio-service-account-user
+    secrets:
+    - name: minio-s3-secret-user
+    EOF
+```
+
+### Run your InferenceService using KServe¶
+Let’s define a new InferenceService YAML for the model and apply it to the cluster in the terminal. Meanwhile, you need to notice that Set `storageUri` to your bucket_name/bucket_path You may also need to change `metadata: name` and `serviceAccountName`.
+
+```bash
+cat << EOF | kubectl apply -f -
+    apiVersion: "serving.kserve.io/v1beta1"
+    kind: "InferenceService"
+    metadata:
+    name: "helmet-detection-serving"
+    spec:
+    predictor:
+        serviceAccountName: minio-service-account-user
+        model:
+        modelFormat:
+            name: pytorch
+        storageUri: "s3://helmet-bucket/helmet_detection"
+        resources:
+            requests:
+                cpu: 50m
+                memory: 200Mi
+            limits:
+                cpu: 100m
+                memory: 500Mi
+            # limits:
+            #   nvidia.com/gpu: "1"   # for inference service on GPU
+    EOF
+```
+
+### Run your InferenceService using KServe¶
+
+Run the following command to check status in the terminal. If the status of `InferenceService` is True, that meaning is your model server is running well.
+
+```bash
+kubectl get inferenceservice helmet-detection-serving -n <your-namespace\>
+```
+
+### Test Perform Inference
+#### Define a Test_bot for convenience¶
+Run the following cells to define a test_bot to do model prediction in the notebook server.
+
+```bash
+Run the following cells to define a test_bot to do model prediction in the notebook server.
+```
+
+```bash
+import requests
+    import json
+    import multiprocess as mp
+    import io
+    import base64
+    import PIL.Image as Image
+    # from PIL import Image
 
 
-# Stop the model serving
-$ docker container ls
-$ docker stop [the helmet container CONTAINER ID]
+    class Test_bot():
+        def __init__(self, uri, model, host, session):
+            self.uri = uri
+            self.model = model
+            self.host = host
+            self.session = session
+            self.headers = {'Host': self.host, 'Content-Type': "image/jpeg", 'Cookie': "authservice_session=" + self.session}
+            self.img = './1.jpg'
+        
+        def update_uri(self, uri):
+            self.uri = uri
+            
+        def update_model(self, model):
+            self.model = model
+            
+        def update_host(self, host):
+            self.host = host
+            self.update_headers()
+            
+        def update_session(self, session):
+            self.session = session
+            self.update_headers()
+            
+        def update_headers(self):
+            self.headers = {'Host': self.host, 'Content-Type': "image/jpeg", 'Cookie': "authservice_session=" + self.session}
+            
+        def get_data(self, x):
+            if x:
+                payload = x
+            else: 
+                payload = self.img
+            with open(payload, "rb") as image:  
+                f = image.read()
+                image_data = base64.b64encode(f).decode('utf-8')    
+
+            return json.dumps({'instances': [image_data]})
+
+        
+        def predict(self, x=None):
+            uri = self.uri + '/v1/models/' + self.model + ':predict'
+            response = requests.request("POST", uri, headers=self.headers, data=self.get_data(x))
+            return response.text
+        
+            
+        def readiness(self):
+            # uri = self.uri + '/v1/models/' + self.model
+            uri = self.uri + '/v1/models/' + self.model
+            response = requests.get(uri, headers = self.headers, timeout=5)
+            return response.text
+
+        
+        def explain(self, x=None):
+            uri = self.uri + '/v1/models/' + self.model + ':explain'
+            response = requests.post(uri, data=self.get_data(x), headers = self.headers, timeout=10)
+            return response.text
+        
+        def concurrent_predict(self, num=10):
+            print("fire " + str(num) + " requests to " + self.host)
+            with mp.Pool() as pool:
+                responses = pool.map(self.predict, range(num))
+            return responses
 ```
 
 
-![Image text](./result.jpg)
+#### Determine host and session¶
+
+Run the following command to get host, which will be set to the headers in our request in the terminal.
+
+```bash
+$ kubectl get inferenceservice helmet-detection-serving -o jsonpath='{.status.url}' | cut -d "/" -f 3
+
+```
+
+Use your web browser to login to Kubeflow, and get Cookies: authservice_session (Chrome: Developer Tools -> Applications -> Cookies)
+
+
+#### Test model prediction¶
+
+Run the following cell to do model prediction in the notebook server.
+
+```bash 
+ # replace it with the url you used to access Kubeflow
+    bot = Test_bot(uri='http://10.117.233.8',
+                model='helmet_detection',
+                # replace it with what is printed above
+                host='helmet-detection-serving.kubeflow-user-example-com.example.com',
+                # replace it
+                session='MTY3MDM5OTkzNnxOd3dBTkZZeU5GSkhUVE5NVGtaRk1rMVpXVVpJVlV4SFFUWkpSRFpIVmxaQ05WaERTRlpRV2xoUFRWZEpXa2hTTjB4SVFrMDNSRkU9fFWl635XpDECJSOEnzFJLOugFqIiGbIniTh0uPs0BCW1')
+
+    print(bot.readiness()) 
+    print(bot.predict('./2.jpg'))
+
+    detections = json.loads(bot.predict('./2.jpg'))
+
+```
+
+The output is like as follow:
+
+```bash
+{"name": "helmet_detection", "ready": true}
+{'predictions': [[{'x1': 0.6902239322662354, 'y1': 0.24169841408729553, 'x2': 0.7481994032859802, 'y2': 0.3332946300506592, 'confidence': 0.8919700980186462, 'class': 'person'}, {'x1': 0.0010159790981560946, 'y1': 0.20112593472003937, 'x2': 0.06262165307998657, 'y2': 0.3038643002510071, 'confidence': 0.8917641043663025, 'class': 'person'}, {'x1': 0.7416869401931763, 'y1': 0.24357035756111145, 'x2': 0.7910981178283691, 'y2': 0.32219842076301575, 'confidence': 0.8897435665130615, 'class': 'person'}, {'x1': 0.6465808153152466, 'y1': 0.30016350746154785, 'x2': 0.6944388151168823, 'y2': 0.37477272748947144, 'confidence': 0.8708840012550354, 'class': 'person'}, {'x1': 0.8362932205200195, 'y1': 0.24196597933769226, 'x2': 0.8901769518852234, 'y2': 0.32216331362724304, 'confidence': 0.8658970594406128, 'class': 'hat'}, {'x1': 0.11715660244226456, 'y1': 0.2785477340221405, 'x2': 0.17345492541790009, 'y2': 0.35548269748687744, 'confidence': 0.8567688465118408, 'class': 'hat'}, {'x1': 0.3243858218193054, 'y1': 0.25397413969039917, 'x2': 0.3961048126220703, 'y2': 0.3512100577354431, 'confidence': 0.8429261445999146, 'class': 'person'}, {'x1': 0.8793138265609741, 'y1': 0.2569176256656647, 'x2': 0.9308530688285828, 'y2': 0.32830461859703064, 'confidence': 0.8314318060874939, 'class': 'hat'}, {'x1': 0.2581776976585388, 'y1': 0.2187282294034958, 'x2': 0.3340612053871155, 'y2': 0.32766249775886536, 'confidence': 0.7706097364425659, 'class': 'person'}, {'x1': 0.23304757475852966, 'y1': 0.255989670753479, 'x2': 0.27176254987716675, 'y2': 0.317762553691864, 'confidence': 0.76960289478302, 'class': 'hat'}, {'x1': 0.5913112163543701, 'y1': 0.29803234338760376, 'x2': 0.6493061780929565, 'y2': 0.3777821362018585, 'confidence': 0.7675313353538513, 'class': 'hat'}, {'x1': 0.596840500831604, 'y1': 0.25816941261291504, 'x2': 0.63739413022995, 'y2': 0.30656352639198303, 'confidence': 0.7505931258201599, 'class': 'hat'}, {'x1': 0.26180964708328247, 'y1': 0.21736088395118713, 'x2': 0.31703171133995056, 'y2': 0.272555410861969, 'confidence': 0.4925423860549927, 'class': 'person'}]]}
+
+```
+
+#### Display model predictions as bounding boxes on the input image
+
+Run the following cell to display model prediction image in the notebook server.
+
+```bash 
+import matplotlib.pyplot as plt
+    import numpy as np
+
+    def visualize_detections(image_path, detections, figsize=(8, 8)):
+        
+        img = Image.open(image_path)
+        plt.figure(figsize=figsize)
+        plt.axis("off")
+        plt.imshow(img)
+    
+        scoreArr, nameArr, boxArr = [], [], []
+        
+        for detection in detections:
+            score = detection['confidence']
+            name = detection['class']  #class_names
+            box = [detection['x1'], detection['y1'], detection['x2'], detection['y2']]      #boxes
+            scoreArr.append(score)
+            nameArr.append(name)
+            boxArr.append(box)
+
+        scoreArr, nameArr, boxArr = np.array(scoreArr), np.array(nameArr), np.array(boxArr)
+
+        boxes, class_names, scores = boxArr, nameArr, scoreArr
+        max_boxes, min_score = 18, 0.1
+        score_split_w = 0.1  # 0.95~1.00 
+        score_split_r = 0.1  #0.90~0.95 
+        
+
+        for i in range(min(boxes.shape[0], max_boxes)):
+            if scores[i] >= min_score:
+                xmin, ymin, xmax, ymax = tuple(boxes[i])
+            
+                ax = plt.gca()
+                text = "{}: {:.2f}".format(class_names[i], (scores[i]))
+                w, h = xmax - xmin, ymax - ymin
+                xmin *= 800
+                ymin *= 500
+                w *= 800
+                h *= 500        
+                
+                if class_names[i] == 'person':
+                    patch = plt.Rectangle(
+                    [xmin, ymin], w, h, fill=False, edgecolor='w', linewidth=3
+                )
+                else:
+                    patch = plt.Rectangle(
+                    [xmin, ymin], w, h, fill=False, edgecolor='c', linewidth=3
+                )
+            
+            ax.add_patch(patch)
+            
+            if class_names[i] == 'person':
+                ax.text(
+                    xmin,
+                    ymin,
+                    text,
+                    bbox={"facecolor": 'w', "alpha": 1.0},
+                    clip_box=ax.clipbox,
+                    clip_on=True,
+                )
+            else:
+                ax.text(
+                    xmin,
+                    ymin,
+                    text,
+                    bbox={"facecolor": 'c', "alpha": 0.8},
+                    clip_box=ax.clipbox,
+                    clip_on=True,
+                )
+        
+        plt.show()
+    
+    image_path = './2.jpg'
+    visualize_detections(image_path, detections['predictions'][0])
+
+```
+
+![Image text](./img/helmet-kserve-02.jpg)
+
+
+#### Delete InferenceService¶
+
+When you are done with your InferenceService, you can delete it by running the following.
+
+```bash
+
+    $ kubectl delete inferenceservice 'yourinferenceservice' -n 'yournamespace'
+```
