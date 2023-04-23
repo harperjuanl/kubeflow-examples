@@ -1,4 +1,4 @@
-# Helmet Detection Deployment on with Kubeflow KServe
+# Helmet Detection Model Serving on with Kubeflow KServe
 
 ## Intruction
 
