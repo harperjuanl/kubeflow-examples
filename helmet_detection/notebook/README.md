@@ -18,7 +18,12 @@ $ pip install -r requirements.txt
 
 - There is GPU RTX 2080 Ti used for data training
 
-## Preprocessing
+## Create Notebook server on Kubeflow UI
+You can refer to the [Document](https://elements-of-ai.github.io/kubeflow-docs/user-guide/notebooks.html) to create and use a Kubeflow notebook.
+
+There we need to create a Notebook Server with 1 GPU, 4CPUs, 16Gi Memory and 16G volume disk
+
+## Download dataset and model 
 
 - We use the VOC2007 dataset (train: *16551 images;*  val: *4952 image*) in the experiment, and you can get the data from [there](pek-dbc2103.eng.vmware.com/juanl/helmet-detection/VOC2007.zip). For the data processing, the `prepare.py` converts the VOC label format (.xml) to yolo label format (.txt) and split the training and  validating data.
 

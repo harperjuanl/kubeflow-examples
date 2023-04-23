@@ -29,7 +29,7 @@ from typing import NamedTuple
 from kubernetes import client
 ```
 
-### Containernize Pipeline Components
+### Containernize Pipeline Components¶
 We use Docker to build images. Basically, Docker can build images automatically by reading the instructions from a Dockerfile. A Dockerfile is a text document that contains all the commands a user could call on the command line to assemble an image.
 
 In this example, we provide you with following Dockerfile for Train component and Evaluate component.
@@ -54,8 +54,37 @@ In this example, we provide you with following Dockerfile for Train component an
     COPY . /
 ```
 
+### Compile Data Ingest Component
+First, we need to create and specify the persistent volume (PVC) for data storage, creating a VolumeOP instance.
 
-## Run Pipeline
+```bash
+    vop = dsl.VolumeOp(name="create_helmet_data_storage_volume",
+                        resource_name="helmet_data_storage_volume", size='10Gi', 
+                        modes=dsl.VOLUME_MODE_RWO)
+```
+We then create a ContainerOp instance, which would be understood and used as "a step" in our pipeline, and return this "step".
+```bash
+    return dsl.ContainerOp(
+        name = \'Download Data\', 
+        image = \'harbor-repo.vmware.com/juanl/helmet_pipeline:v1\',
+        command = [\'python3\', \'ingest_pipeline.py\'],
+        arguments=[
+            \'--dataurl\', dataurl,
+            \'--datapath\', datapath
+        ],
+        pvolumes={
+            \'/VOCdevkit\': vop.volume
+        }
+    )
+```
+
+We need to specify the inputs `dataurl`, `datapath` in arguments, container image in image, and volume for data storage in pvolumes. Note that here in image, we provide you with our built images, containing both train folder and evaluate folder, stored on our projects.registry repo. If you want to use your own image, please remember to change this value.
+
+We also need to specify command. In this provided case, as we containernize the image at root directory, in command we need python3 ingest_pipeline.py. (If you containernize Train component and Evaluate component one by one in each own folder, you may need to change this value to python3 ingest_pipeline.py.)
+
+### Declare Data Processing Component
+
+## Execute the Pipeline
 
 In the example, we compiled the pipeline as a YAML file. So here we provide you with a brief guide on how to run a pipeline.
 
