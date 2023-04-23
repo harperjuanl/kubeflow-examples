@@ -84,6 +84,64 @@ We also need to specify command. In this provided case, as we containernize the 
 
 ### Declare Data Processing Component
 
+```bash
+def data_process(comp1):
+    return dsl.ContainerOp(
+        name = 'Process Data', 
+        image = 'harbor-repo.vmware.com/juanl/helmet_ingest_data:v1',
+        command = ['python3', 'prepare.py'],
+        pvolumes={
+            '/VOCdevkit': comp1.pvolumes['/VOCdevkit']
+        }
+    )
+```
+
+### Declare Model Training Component
+
+```bash
+def model_train(comp2, epoch, device, workers_num, model_export):
+    return dsl.ContainerOp(
+        name = 'Model Training',
+        image = 'harpersweet/helmet_pipeline:v2',
+        pvolumes={
+            '/VOCdevkit': comp2.pvolumes['/VOCdevkit']
+        },
+        # command=['sh', '-c'],
+        # arguments=['nvidia-smi'],
+        command = ['python3', 'train_pipeline.py'],
+        arguments=[
+            '--epoch', epoch,
+            '--device', device,
+            '--workers', workers_num,
+            '--output_dir', model_export
+        ],
+    ).set_gpu_limit(1).set_cpu_request('2').set_memory_request('8G')
+```
+
+### Compile pipeline
+
+Execute below function to compile the YAML file:
+
+```bash
+def model_train(comp2, epoch, device, workers_num, model_export):
+    return dsl.ContainerOp(
+        name = 'Model Training',
+        image = 'harpersweet/helmet_pipeline:v2',
+        pvolumes={
+            '/VOCdevkit': comp2.pvolumes['/VOCdevkit']
+        },
+        # command=['sh', '-c'],
+        # arguments=['nvidia-smi'],
+        command = ['python3', 'train_pipeline.py'],
+        arguments=[
+            '--epoch', epoch,
+            '--device', device,
+            '--workers', workers_num,
+            '--output_dir', model_export
+        ],
+    ).set_gpu_limit(1).set_cpu_request('2').set_memory_request('8G')
+```
+
 ## Execute the Pipeline
 
 In the example, we compiled the pipeline as a YAML file. So here we provide you with a brief guide on how to run a pipeline.
@@ -94,15 +152,15 @@ Following our notebook, you should be able to see a file called helmet_pipeline_
 we provide you with a already-compiled pipeline YAML files for quick-test purpose. If you prefer that, feel free to skip to pipeline running part and use them.
 Upload the yaml file to Pipelines on Kubeflow UI.
 
-![Image text](./imgs/helmet-pipeline-01.png)
-![Image text](./imgs/helmet-pipeline-02.png)
+![Image text](https://github.com/harperjuanl/kubeflow-examples/blob/main/helmet_detection/pipelines/imgs/helmet-pipeline-01.png)
+![Image text](https://github.com/harperjuanl/kubeflow-examples/blob/main/helmet_detection/pipelines/imgs/helmet-pipeline-02.png)
 
 ### Create experiment and run
 
 Create an experiment for this pipeline, and create a run. This time, you need to provide two inputs, dataset and data_path, exactly the ones for our first step Data Download. If you do not intend to make any personalization on datasets and data path, enter following values
 
-![Image text](./imgs/helmet-pipeline-03.png)
-![Image text](./imgs/helmet-pipeline-04.png)
+![Image text](https://github.com/harperjuanl/kubeflow-examples/blob/main/helmet_detection/pipelines/imgs/helmet-pipeline-03.png)
+![Image text](https://github.com/harperjuanl/kubeflow-examples/blob/main/helmet_detection/pipelines/imgs/helmet-pipeline-04.png)
 
 ### Check logs and outputs 
-![Image text](./imgs/helmet-pipeline-05.png)
+![Image text](https://github.com/harperjuanl/kubeflow-examples/blob/main/helmet_detection/pipelines/imgs/helmet-pipeline-05.png)

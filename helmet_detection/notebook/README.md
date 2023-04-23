@@ -16,7 +16,6 @@ $ cd Helmet-Detection-Yolov5
 $ pip install -r requirements.txt
 ```
 
-- There is GPU RTX 2080 Ti used for data training
 
 ## Create Notebook server on Kubeflow UI
 You can refer to the [Document](https://elements-of-ai.github.io/kubeflow-docs/user-guide/notebooks.html) to create and use a Kubeflow notebook.
