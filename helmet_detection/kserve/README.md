@@ -366,7 +366,7 @@ import matplotlib.pyplot as plt
 
 ```
 
-![Image text](./img/helmet-kserve-02.jpg)
+![Image text](https://github.com/harperjuanl/kubeflow-examples/blob/main/helmet_detection/kserve/img/helmet-kserve-02.png)
 
 
 #### Delete InferenceService¶
