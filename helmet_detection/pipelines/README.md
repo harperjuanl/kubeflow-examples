@@ -53,3 +53,27 @@ In this example, we provide you with following Dockerfile for Train component an
 
     COPY . /
 ```
+
+
+## Run Pipeline
+
+In the example, we compiled the pipeline as a YAML file. So here we provide you with a brief guide on how to run a pipeline.
+
+### Upload the pipeline to Kubeflow UI 
+
+Following our notebook, you should be able to see a file called helmet_pipeline_demo.yaml. 
+we provide you with a already-compiled pipeline YAML files for quick-test purpose. If you prefer that, feel free to skip to pipeline running part and use them.
+Upload the yaml file to Pipelines on Kubeflow UI.
+
+![Image text](./imgs/helmet-pipeline-01.png)
+![Image text](./imgs/helmet-pipeline-02.png)
+
+### Create experiment and run
+
+Create an experiment for this pipeline, and create a run. This time, you need to provide two inputs, dataset and data_path, exactly the ones for our first step Data Download. If you do not intend to make any personalization on datasets and data path, enter following values
+
+![Image text](./imgs/helmet-pipeline-03.png)
+![Image text](./imgs/helmet-pipeline-04.png)
+
+### Check logs and outputs 
+![Image text](./imgs/helmet-pipeline-05.png)
